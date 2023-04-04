@@ -2,8 +2,6 @@ from bs4 import BeautifulSoup
 from urllib3.exceptions import InsecureRequestWarning
 from db.connect import get_data_robots
 import requests
-import urllib3
-import json
 
 requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS = 'ALL:@SECLEVEL=1'
 requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
@@ -18,6 +16,7 @@ courses = get_courses.json()
 get_ufs = requests.get("https://www.ead.senac.br/cms/api/ufs?instant-request=1680543430065", headers=headers, verify=False)
 ufs = get_ufs.json()
 
+#Get all UFS
 list_ufs = []
 for uf in ufs:
     uf_data = {
@@ -26,6 +25,7 @@ for uf in ufs:
     }
     list_uf = list_ufs.append(uf_data)
 
+#Get all courses
 list_courses = []
 for cc in courses:
     for cn in cc["cursos"]:
@@ -36,6 +36,7 @@ for cc in courses:
         }
         list_course = list_courses.append(data_course)
 
+#Foreach courses and ufs to get the ids payments
 for lc in list_courses:
     for lu in list_ufs:
         get_payment_ids = requests.get("https://www.ead.senac.br/cms/api/turmas/forma-pagamento-curso/"+lc["path"]+"?instant-request=1680545579812", headers=headers, verify=False)
@@ -50,12 +51,13 @@ for lc in list_courses:
                     "name": locall["nome"],
                     "id": str(locall["id"])
                 }
-
+            
+            #Get price to add in MongoDB all data scraped
             get_prices = requests.get("https://www.ead.senac.br/cms/api/turmas/precoespecial/"+lu["sigla"]+"/"+data_local["id"]+"/"+str(payment_id["id"])+"?instant-request=1680545589159", headers=headers, verify=False)
-            print("https://www.ead.senac.br/cms/api/turmas/precoespecial/"+lu["sigla"]+"/"+data_local["id"]+"/"+lc["id"]+"?instant-request=1680545630887")
             prices = get_prices.json()
 
             for price in prices:
+                #Function to add the data in DB
                 insert.insert_scrap_data(
                     ies_name="SENAC",
                     course_name=lc["name"],
